@@ -23,6 +23,14 @@ async def update_minecraft_status():
         data = response.json()
 
         players_online = data['players']['online']
+        if 'list' in data['players'] and data['players']['list']:
+            player_names = ', '.join(data['players']['list'])
+            # Discord has a limit of 128 characters for custom statuses
+            if len(player_names) > 128:
+                player_names = player_names[:125] + "..."
+        else:
+            player_names = "Nobody Online!"
+
         # Define the new channel name, customize it as needed
         new_channel_name = f'Minecraft Online: {players_online}'
 
@@ -31,11 +39,19 @@ async def update_minecraft_status():
 
         # Update the channel name
         if channel and channel.name != new_channel_name:
-            await channel.edit(name=new_channel_name)
-            print(f'Updated the channel name to "{new_channel_name}"')
+            try:
+                await channel.edit(name=new_channel_name)
+                print(f'Updated the channel name to "{new_channel_name}"')
+            except Exception as e:
+                print(f'Failed to update channel name: {e}')
+
+        # Update the bot's Playing status with the list of player names or the message "Nobody Online!"
+        activity = discord.Game(name=player_names)
+        await client.change_presence(status=discord.Status.online, activity=activity)
 
         # Wait before the next check
         await asyncio.sleep(60*10)  # Update every 10 minutes
+
 
 @client.event
 async def on_ready():
